@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>大人學 Podcast 列表</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          'PingFang TC', 'Microsoft JhengHei', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+      }
+
+      .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .filters label {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .filters select {
+        padding: 10px 15px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: border-color 0.3s;
+      }
+
+      .filters select:hover {
+        border-color: #667eea;
+      }
+
+      .filters select:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .stats {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .stats-item {
+        font-size: 18px;
+        color: #555;
+      }
+
+      .stats-item strong {
+        color: #667eea;
+        font-size: 24px;
+      }
+
+      .loading {
+        text-align: center;
+        color: white;
+        font-size: 20px;
+        padding: 40px;
+      }
+
+      .podcast-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 20px;
+      }
+
+      .podcast-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      .podcast-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .podcast-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 10px;
+        line-height: 1.4;
+      }
+
+      .podcast-meta {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .badge-instructor {
+        background: #667eea;
+        color: white;
+      }
+
+      .badge-category {
+        background: #f093fb;
+        color: white;
+      }
+
+      .podcast-description {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 10px;
+      }
+
+      .podcast-models {
+        color: #888;
+        font-size: 13px;
+        margin-bottom: 10px;
+        font-style: italic;
+      }
+
+      .podcast-date {
+        color: #999;
+        font-size: 12px;
+        margin-bottom: 15px;
+      }
+
+      .watch-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: opacity 0.3s;
+      }
+
+      .watch-btn:hover {
+        opacity: 0.9;
+      }
+
+      .error {
+        background: #fee;
+        color: #c33;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎓 大人學 Podcast</h1>
+
+      <!-- 篩選器 -->
+      <div class="filters">
+        <label for="instructor-select">講師：</label>
+        <select id="instructor-select">
+          <option value="">所有講師</option>
+        </select>
+
+        <label for="category-select">分類：</label>
+        <select id="category-select">
+          <option value="">所有分類</option>
+        </select>
+      </div>
+
+      <!-- 統計資料 -->
+      <div class="stats">
+        <div class="stats-item">共 <strong id="total-count">0</strong> 筆</div>
+        <div
+          class="stats-item"
+          id="cache-status"
+        >
+          載入中...
+        </div>
+      </div>
+
+      <!-- Podcast 列表 -->
+      <div id="podcast-container">
+        <div class="loading">⏳ 載入中...</div>
+      </div>
+    </div>
+
+    <script>
+      // 🔧 設定 API 基本 URL（部署後改為 Zeabur URL）
+      // const API_BASE_URL = 'http://localhost:3000';
+      const API_BASE_URL = 'https://smalltalk.zeabur.app';
+
+      // DOM 元素
+      const instructorSelect = document.getElementById('instructor-select');
+      const categorySelect = document.getElementById('category-select');
+      const podcastContainer = document.getElementById('podcast-container');
+      const totalCount = document.getElementById('total-count');
+      const cacheStatus = document.getElementById('cache-status');
+
+      // 載入篩選選項
+      async function loadFilterOptions() {
+        try {
+          const [instructorsRes, categoriesRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/instructors`),
+            fetch(`${API_BASE_URL}/api/categories`),
+          ]);
+
+          const instructorsData = await instructorsRes.json();
+          const categoriesData = await categoriesRes.json();
+
+          // 填充講師選項
+          instructorsData.data.forEach((instructor) => {
+            const option = document.createElement('option');
+            option.value = instructor;
+            option.textContent = instructor;
+            instructorSelect.appendChild(option);
+          });
+
+          // 填充分類選項
+          categoriesData.data.forEach((category) => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+          });
+        } catch (error) {
+          console.error('載入篩選選項失敗:', error);
+        }
+      }
+
+      // 載入 Podcasts
+      async function loadPodcasts() {
+        try {
+          podcastContainer.innerHTML =
+            '<div class="loading">⏳ 載入中...</div>';
+
+          const params = new URLSearchParams();
+          if (instructorSelect.value)
+            params.append('instructor', instructorSelect.value);
+          if (categorySelect.value)
+            params.append('category', categorySelect.value);
+
+          const response = await fetch(
+            `${API_BASE_URL}/api/podcasts?${params.toString()}`
+          );
+          const result = await response.json();
+
+          if (!result.success) {
+            throw new Error(result.error);
+          }
+
+          // 更新統計
+          totalCount.textContent = result.count;
+          cacheStatus.textContent = result.cached ? '使用快取' : '最新資料';
+
+          // 顯示 Podcasts
+          if (result.data.length === 0) {
+            podcastContainer.innerHTML =
+              '<div class="error">沒有找到符合條件的 Podcast</div>';
+            return;
+          }
+
+          const grid = document.createElement('div');
+          grid.className = 'podcast-grid';
+
+          result.data.forEach((podcast) => {
+            const card = document.createElement('div');
+            card.className = 'podcast-card';
+
+            card.innerHTML = `
+                        <div class="podcast-title">${escapeHtml(
+                          podcast.title
+                        )}</div>
+                        <div class="podcast-meta">
+                            ${
+                              podcast.instructor
+                                ? `<span class="badge badge-instructor">👤 ${escapeHtml(
+                                    podcast.instructor
+                                  )}</span>`
+                                : ''
+                            }
+                            ${
+                              podcast.mainCategory
+                                ? `<span class="badge badge-category">🏷️ ${escapeHtml(
+                                    podcast.mainCategory
+                                  )}</span>`
+                                : ''
+                            }
+                        </div>
+                        <div class="podcast-description">${escapeHtml(
+                          podcast.description
+                        )}</div>
+                        ${
+                          podcast.mentalModels
+                            ? `<div class="podcast-models">🧠 ${escapeHtml(
+                                podcast.mentalModels
+                              )}</div>`
+                            : ''
+                        }
+                        <div class="podcast-date">📅 ${escapeHtml(
+                          podcast.publishedAt
+                        )}</div>
+                        <a href="${escapeHtml(
+                          podcast.youtubeUrl
+                        )}" target="_blank" class="watch-btn">
+                            ▶️ 觀看影片
+                        </a>
+                    `;
+
+            grid.appendChild(card);
+          });
+
+          podcastContainer.innerHTML = '';
+          podcastContainer.appendChild(grid);
+        } catch (error) {
+          console.error('載入 Podcasts 失敗:', error);
+          podcastContainer.innerHTML = `<div class="error">❌ 載入失敗: ${error.message}<br><br>請確認 API server 是否正在運行</div>`;
+        }
+      }
+
+      // HTML 轉義函數（防止 XSS）
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // 事件監聽
+      instructorSelect.addEventListener('change', loadPodcasts);
+      categorySelect.addEventListener('change', loadPodcasts);
+
+      // 初始載入
+      loadFilterOptions();
+      loadPodcasts();
+    </script>
+  </body>
+</html>
